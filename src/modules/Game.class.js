@@ -21,8 +21,11 @@ class Game {
   }
 
   moveLeft() {
+    if (!this.canMoveLeft()) {
+      return;
+    }
+
     const board = this.board;
-    const copy = this.makeCopy(board);
 
     for (let row = 0; row < board.length; row++) {
       const nonZeroRow = board[row].filter((el) => el !== 0);
@@ -48,26 +51,15 @@ class Game {
       board[row] = newRow;
     }
 
-    let hasChanged = false;
-
-    for (let row = 0; row < board.length; row++) {
-      if (hasChanged) {
-        break;
-      }
-
-      for (let column = 0; column < board.length; column++) {
-        if (board[row][column] !== copy[row][column]) {
-          hasChanged = true;
-          this.addRandomTile();
-          break;
-        }
-      }
-    }
+    this.addRandomTile();
   }
 
   moveRight() {
+    if (!this.canMoveRight()) {
+      return;
+    }
+
     const board = this.board;
-    const copy = this.makeCopy(board);
 
     for (let row = 0; row < board.length; row++) {
       const nonZeroRow = board[row].filter((el) => el !== 0);
@@ -93,27 +85,15 @@ class Game {
       newRow.reverse();
       board[row] = newRow;
     }
-
-    let hasChanged = false;
-
-    for (let row = 0; row < board.length; row++) {
-      if (hasChanged) {
-        break;
-      }
-
-      for (let column = 0; column < board.length; column++) {
-        if (board[row][column] !== copy[row][column]) {
-          hasChanged = true;
-          this.addRandomTile();
-          break;
-        }
-      }
-    }
+    this.addRandomTile();
   }
 
   moveUp() {
+    if (!this.canMoveUp()) {
+      return;
+    }
+
     const board = this.board;
-    const copy = this.makeCopy(board);
     const columns = [[], [], [], []];
 
     for (let row = 0; row < board.length; row++) {
@@ -147,26 +127,15 @@ class Game {
       }
     }
 
-    let hasChanged = false;
-
-    for (let row = 0; row < board.length; row++) {
-      if (hasChanged) {
-        break;
-      }
-
-      for (let column = 0; column < board.length; column++) {
-        if (board[row][column] !== copy[row][column]) {
-          hasChanged = true;
-          this.addRandomTile();
-          break;
-        }
-      }
-    }
+    this.addRandomTile();
   }
 
   moveDown() {
+    if (!this.canMoveDown()) {
+      return;
+    }
+
     const board = this.board;
-    const copy = this.makeCopy(board);
     const columns = [[], [], [], []];
 
     for (let row = 0; row < board.length; row++) {
@@ -202,21 +171,7 @@ class Game {
       }
     }
 
-    let hasChanged = false;
-
-    for (let row = 0; row < board.length; row++) {
-      if (hasChanged) {
-        break;
-      }
-
-      for (let column = 0; column < board.length; column++) {
-        if (board[row][column] !== copy[row][column]) {
-          hasChanged = true;
-          this.addRandomTile();
-          break;
-        }
-      }
-    }
+    this.addRandomTile();
   }
 
   getScore() {
@@ -227,17 +182,26 @@ class Game {
     return this.board;
   }
 
-  /**
-   * Returns the current game status.
-   *
-   * @returns {string} One of: 'idle', 'playing', 'win', 'lose'
-   *
-   * `idle` - the game has not started yet (the initial state);
-   * `playing` - the game is in progress;
-   * `win` - the game is won;
-   * `lose` - the game is lost
-   */
-  getStatus() {}
+  getStatus() {
+    if (
+      !this.canMoveDown() &&
+      !this.canMoveUp() &&
+      !this.canMoveLeft() &&
+      !this.canMoveRight()
+    ) {
+      return 'lose';
+    }
+
+    if (this.score >= 2048) {
+      return 'win';
+    }
+
+    if (this.isTheSame(this.board, this.initialState)) {
+      return 'idle';
+    }
+
+    return 'playing';
+  }
 
   start() {
     this.score = 0;
@@ -288,8 +252,91 @@ class Game {
     return emptyCells;
   }
 
-  makeCopy(original) {
-    return original.map((e) => [...e]);
+  canMoveLeft() {
+    for (let row = 0; row < 4; row++) {
+      for (let col = 1; col < 4; col++) {
+        if (this.board[row][col] !== 0) {
+          if (
+            this.board[row][col - 1] === 0 ||
+            this.board[row][col - 1] === this.board[row][col]
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  canMoveRight() {
+    for (let row = 0; row < 4; row++) {
+      for (let col = 2; col >= 0; col--) {
+        if (this.board[row][col] !== 0) {
+          if (
+            this.board[row][col + 1] === 0 ||
+            this.board[row][col + 1] === this.board[row][col]
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  canMoveUp() {
+    for (let row = 1; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const cell = this.board[row][col];
+
+        if (cell !== 0) {
+          if (
+            this.board[row - 1][col] === 0 ||
+            this.board[row - 1][col] === cell
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  canMoveDown() {
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 4; col++) {
+        const cell = this.board[row][col];
+
+        if (cell !== 0) {
+          if (
+            this.board[row + 1][col] === 0 ||
+            this.board[row + 1][col] === cell
+          ) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  isTheSame(boardOne, boardTwo) {
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const cellOne = boardOne[row][col];
+        const cellTwo = boardTwo[row][col];
+
+        if (cellOne !== cellTwo) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   handler(e) {
