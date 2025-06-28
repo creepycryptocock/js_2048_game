@@ -1,10 +1,5 @@
 'use strict';
 
-/**
- * This class represents the game.
- * Now it has a basic structure, that is needed for testing.
- * Feel free to add more props and methods if needed.
- */
 class Game {
   constructor(
     initialState = [
@@ -14,164 +9,26 @@ class Game {
       [0, 0, 0, 0],
     ],
   ) {
-    this.initialState = initialState;
     this.board = initialState.map((row) => [...row]);
     this.score = 0;
-    this.status = '';
+    this.status = 'idle';
   }
 
   moveLeft() {
-    if (!this.canMoveLeft()) {
-      return;
-    }
-
-    const board = this.board;
-
-    for (let row = 0; row < board.length; row++) {
-      const nonZeroRow = board[row].filter((el) => el !== 0);
-
-      const newRow = [];
-
-      for (let i = 0; i < nonZeroRow.length; i++) {
-        if (nonZeroRow[i] === nonZeroRow[i + 1]) {
-          const merged = nonZeroRow[i] + nonZeroRow[i + 1];
-
-          newRow.push(merged);
-          this.score += merged;
-          i++;
-        } else {
-          newRow.push(nonZeroRow[i]);
-        }
-      }
-
-      while (newRow.length < 4) {
-        newRow.push(0);
-      }
-
-      board[row] = newRow;
-    }
-
-    this.addRandomTile();
+    this.move((row) => this.mergeLeft(row));
   }
-
   moveRight() {
-    if (!this.canMoveRight()) {
-      return;
-    }
-
-    const board = this.board;
-
-    for (let row = 0; row < board.length; row++) {
-      const nonZeroRow = board[row].filter((el) => el !== 0);
-
-      const newRow = [];
-
-      for (let i = nonZeroRow.length - 1; i >= 0; i--) {
-        if (nonZeroRow[i] === nonZeroRow[i - 1]) {
-          const merged = nonZeroRow[i] + nonZeroRow[i - 1];
-
-          newRow.push(merged);
-          this.score += merged;
-          i--;
-        } else {
-          newRow.push(nonZeroRow[i]);
-        }
-      }
-
-      while (newRow.length < 4) {
-        newRow.push(0);
-      }
-
-      newRow.reverse();
-      board[row] = newRow;
-    }
-    this.addRandomTile();
+    this.move((row) => this.mergeRight(row));
   }
-
   moveUp() {
-    if (!this.canMoveUp()) {
-      return;
-    }
-
-    const board = this.board;
-    const columns = [[], [], [], []];
-
-    for (let row = 0; row < board.length; row++) {
-      for (let col = 0; col < board[row].length; col++) {
-        columns[col].push(board[row][col]);
-      }
-    }
-
-    for (let col = 0; col < 4; col++) {
-      const nonZero = columns[col].filter((n) => n !== 0);
-      const newCol = [];
-
-      for (let i = 0; i < nonZero.length; i++) {
-        if (nonZero[i] === nonZero[i + 1]) {
-          const merged = nonZero[i] + nonZero[i + 1];
-
-          newCol.push(merged);
-          this.score += merged;
-          i++;
-        } else {
-          newCol.push(nonZero[i]);
-        }
-      }
-
-      while (newCol.length < 4) {
-        newCol.push(0);
-      }
-
-      for (let row = 0; row < 4; row++) {
-        board[row][col] = newCol[row];
-      }
-    }
-
-    this.addRandomTile();
+    this.transpose();
+    this.moveLeft();
+    this.transpose();
   }
-
   moveDown() {
-    if (!this.canMoveDown()) {
-      return;
-    }
-
-    const board = this.board;
-    const columns = [[], [], [], []];
-
-    for (let row = 0; row < board.length; row++) {
-      for (let col = 0; col < board[row].length; col++) {
-        columns[col].push(board[row][col]);
-      }
-    }
-
-    for (let col = 0; col < 4; col++) {
-      const nonZero = columns[col].filter((n) => n !== 0);
-      const newCol = [];
-
-      for (let i = nonZero.length - 1; i > 0; i--) {
-        if (nonZero[i] === nonZero[i - 1]) {
-          const merged = nonZero[i] + nonZero[i - 1];
-
-          newCol.push(merged);
-          this.score += merged;
-          i--;
-        } else {
-          newCol.push(nonZero[i]);
-        }
-      }
-
-      while (newCol.length < 4) {
-        newCol.push(0);
-      }
-
-      newCol.reverse();
-
-      for (let row = 0; row < 4; row++) {
-        board[row][col] = newCol[row];
-      }
-    }
-
-    this.addRandomTile();
+    this.transpose();
+    this.moveRight();
+    this.transpose();
   }
 
   getScore() {
@@ -183,68 +40,122 @@ class Game {
   }
 
   getStatus() {
-    if (
-      !this.canMoveDown() &&
-      !this.canMoveUp() &&
-      !this.canMoveLeft() &&
-      !this.canMoveRight()
-    ) {
-      return 'lose';
-    }
-
-    if (this.score >= 2048) {
-      return 'win';
-    }
-
-    if (this.isTheSame(this.board, this.initialState)) {
-      return 'idle';
-    }
-
-    return 'playing';
+    return this.status;
   }
 
   start() {
-    this.score = 0;
-    this.board = this.initialState.map((row) => [...row]);
     this.status = 'playing';
-
     this.addRandomTile();
     this.addRandomTile();
   }
 
-  restart() {}
+  restart() {
+    this.board = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    this.score = 0;
+    this.status = 'playing';
+    this.addRandomTile();
+    this.addRandomTile();
+  }
 
-  // HELPERS
+  move(transform) {
+    if (this.status !== 'playing') {
+      return;
+    }
+
+    let changed = false;
+    const newBoard = this.board.map((row) => {
+      const newRow = transform([...row]);
+
+      if (newRow.toString() !== row.toString()) {
+        changed = true;
+      }
+
+      return newRow;
+    });
+
+    if (changed) {
+      this.board = newBoard;
+      this.addRandomTile();
+      this.checkGameStatus();
+    }
+  }
+
+  mergeLeft(row) {
+    const nonZeroArray = row.filter((n) => n);
+    const newRow = [0, 0, 0, 0];
+    let index = 0;
+
+    for (let i = 0; i < nonZeroArray.length; i++) {
+      if (
+        i < nonZeroArray.length - 1 &&
+        nonZeroArray[i] === nonZeroArray[i + 1]
+      ) {
+        const merged = nonZeroArray[i] * 2;
+
+        newRow[index] = merged;
+        this.score += merged;
+        i++;
+      } else {
+        newRow[index] = nonZeroArray[i];
+      }
+      index++;
+    }
+
+    return newRow;
+  }
+
+  mergeRight(row) {
+    const nonZeroArray = row.filter((n) => n);
+    const newRow = [0, 0, 0, 0];
+
+    let index = 3;
+
+    for (let i = nonZeroArray.length - 1; i >= 0; i--) {
+      if (i > 0 && nonZeroArray[i] === nonZeroArray[i - 1]) {
+        const merged = nonZeroArray[i] * 2;
+
+        newRow[index] = merged;
+        this.score += merged;
+        i--;
+      } else {
+        newRow[index] = nonZeroArray[i];
+      }
+      index--;
+    }
+
+    return newRow;
+  }
+
+  transpose() {
+    this.board = this.board[0].map((_, i) => this.board.map((row) => row[i]));
+  }
+
   addRandomTile() {
+    const tile = Math.random() < 0.9 ? 2 : 4;
     const emptyCells = this.findEmpty();
 
     if (emptyCells.length > 0) {
       const random = Math.floor(Math.random() * emptyCells.length);
-      const probability = Math.random();
-      let tile;
+      const [row, col] = emptyCells[random];
 
-      if (probability <= 0.1) {
-        tile = 4;
-      } else {
-        tile = 2;
-      }
-
-      const [row, column] = emptyCells[random];
-
-      this.board[row][column] = tile;
+      this.board[row][col] = tile;
     }
   }
 
   findEmpty() {
     const emptyCells = [];
-    const board = this.board;
 
-    for (let row = 0; row < board.length; row++) {
-      for (let column = 0; column < board[row].length; column++) {
-        const cell = board[row][column];
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const cell = this.board[row][col];
 
         if (cell === 0) {
-          emptyCells.push([row, column]);
+          emptyCells.push([row, col]);
         }
       }
     }
@@ -252,111 +163,34 @@ class Game {
     return emptyCells;
   }
 
-  canMoveLeft() {
-    for (let row = 0; row < 4; row++) {
-      for (let col = 1; col < 4; col++) {
-        if (this.board[row][col] !== 0) {
-          if (
-            this.board[row][col - 1] === 0 ||
-            this.board[row][col - 1] === this.board[row][col]
-          ) {
-            return true;
-          }
-        }
-      }
+  checkGameStatus() {
+    if (this.board.flat().includes(2048)) {
+      this.status = 'win';
+    } else if (!this.canMove()) {
+      this.status = 'lose';
     }
-
-    return false;
   }
 
-  canMoveRight() {
+  canMove() {
     for (let row = 0; row < 4; row++) {
-      for (let col = 2; col >= 0; col--) {
-        if (this.board[row][col] !== 0) {
-          if (
-            this.board[row][col + 1] === 0 ||
-            this.board[row][col + 1] === this.board[row][col]
-          ) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  }
-
-  canMoveUp() {
-    for (let row = 1; row < 4; row++) {
       for (let col = 0; col < 4; col++) {
         const cell = this.board[row][col];
 
-        if (cell !== 0) {
-          if (
-            this.board[row - 1][col] === 0 ||
-            this.board[row - 1][col] === cell
-          ) {
-            return true;
-          }
+        if (cell === 0) {
+          return true;
+        }
+
+        if (col < 3 && cell === this.board[row][col + 1]) {
+          return true;
+        }
+
+        if (row < 3 && cell === this.board[row + 1][col]) {
+          return true;
         }
       }
     }
 
     return false;
-  }
-
-  canMoveDown() {
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 4; col++) {
-        const cell = this.board[row][col];
-
-        if (cell !== 0) {
-          if (
-            this.board[row + 1][col] === 0 ||
-            this.board[row + 1][col] === cell
-          ) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  }
-
-  isTheSame(boardOne, boardTwo) {
-    for (let row = 0; row < 4; row++) {
-      for (let col = 0; col < 4; col++) {
-        const cellOne = boardOne[row][col];
-        const cellTwo = boardTwo[row][col];
-
-        if (cellOne !== cellTwo) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
-  handler(e) {
-    switch (e.key) {
-      case 'ArrowLeft':
-        this.moveLeft();
-        break;
-
-      case 'ArrowRight':
-        this.moveRight();
-        break;
-
-      case 'ArrowUp':
-        this.moveUp();
-        break;
-
-      case 'ArrowDown':
-        this.moveDown();
-        break;
-    }
   }
 }
 
